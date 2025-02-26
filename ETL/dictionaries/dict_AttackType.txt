@@ -1,0 +1,41 @@
+Phishing
+Injection
+Malware
+Adware
+Whaling
+Spearphishing
+Spear Phishing
+Smishing
+MITM
+Ransomware
+SQL injection
+Zero-day
+Zero day
+DNS
+DNS tunneling
+XSS 
+Cross-Site Scripting
+Reverse shell
+Cryptojacking
+Crypto-jacking
+Insider threats
+Password attacks
+Internet of things
+Social engineering
+Spoofing
+Sniffing
+Defacement
+Network security
+Birthday attack
+Brute force attacks
+Drive-by attacks
+Session hijacking
+Supply chain attacks
+Account compromise
+Botnets
+DoS
+DDoS
+Denial-of-Service
+Denial of Service
+Installs malware or additional harmful software
+Social engineering
