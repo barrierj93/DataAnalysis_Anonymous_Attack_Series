@@ -35,8 +35,6 @@
 
 
 # 1. Introduction
-## Case Scenario.
-
 - **Scope**: The primary goal was to analyze attacks attributed to Anonymous, understanding patterns and implications for improved cyber defense strategies.
 - **Objective**: To identify recurring techniques, targeted entities, and geographical trends, offering actionable insights for cybersecurity practitioners.
 - **Results**: A clean, structured dataset and visualizations revealing critical insights into Anonymous' activities over a decade.
