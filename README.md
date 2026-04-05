@@ -1,4 +1,4 @@
-![alt text](./images/PowerBI_Pres.png)
+![alt text](./images/anonymous_series.png)
 
 &nbsp;
 
