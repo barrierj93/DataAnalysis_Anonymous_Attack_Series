@@ -97,21 +97,6 @@ The analysis uncovered:
 
 &nbsp;
 
-
-*PowerBI Dashboard*
-
-
-
-&nbsp;
-
-
-*Creating Tableau Dashboard*
-
-![alt text](./images/image-8.png)
-
-&nbsp;
-
-
 # 4. Conclusion
 
 ## Achievements
