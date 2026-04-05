@@ -1,11 +1,12 @@
 # Anonymous Report: 2012-2023 attack series
 
+![alt text](./images/PowerBI_Pres.png)
+
 &nbsp;
 
 # Executive Summary
 
 **1. Introduction**
-- Case Scenario
 - Scope
 - Objective
 - Results
@@ -37,10 +38,6 @@
 
 # 1. Introduction
 ## Case Scenario.
-
-A prestigious Cyber Threat Intelligence (CTI) consultancy has requested a Data Analysis report on **attacks attributed to the hacker group Anonymous** between 2012 and 2023. This analysis will provide a retrospective view of the group's activities and help identify patterns, techniques, and preferred targets.
-
-As a data analyst, my task is to delve into this decade of hacking activity, unraveling the complex web of Anonymous's operations. I must gather, process, and analyze data from multiple sources, looking for trends, anomalies, and evolutions in their attack methods. This report will be crucial for organizations to better understand the threats they face and strengthen their defenses against similar future attacks.
 
 - **Scope**: The primary goal was to analyze attacks attributed to Anonymous, understanding patterns and implications for improved cyber defense strategies.
 - **Objective**: To identify recurring techniques, targeted entities, and geographical trends, offering actionable insights for cybersecurity practitioners.
@@ -107,7 +104,7 @@ The analysis uncovered:
 
 *PowerBI Dashboard*
 
-![alt text](./images/PowerBI_Pres.png)
+
 
 &nbsp;
 
