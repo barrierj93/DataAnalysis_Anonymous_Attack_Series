@@ -1,5 +1,3 @@
-# Anonymous Report: 2012-2023 attack series
-
 ![alt text](./images/PowerBI_Pres.png)
 
 &nbsp;
