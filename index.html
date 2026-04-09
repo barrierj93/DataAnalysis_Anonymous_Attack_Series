@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anonymous Report: 2012–2023 Attack Series</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'IBM Plex Sans JP',sans-serif;color:#fff;background:#090000;min-height:100vh;overflow-y:auto;overflow-x:hidden}
+#bg{position:fixed;inset:0;background:url('fondo.png') center/cover no-repeat;opacity:.10;z-index:0;pointer-events:none}
+#page{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;padding:0 100px}
+#hdr{flex:0 0 auto;padding:11px 0 10px;border-bottom:1px solid rgba(255,255,255,.14)}
+#hdr h1{font-weight:700;font-size:1.15rem;letter-spacing:.015em}
+#main{flex:1 1 0;min-height:0;display:grid;grid-template-columns:1fr 160px 240px;grid-template-rows:1fr 205px;height:calc(100vh - 44px)}
+#map-wrap{grid-column:1;grid-row:1;position:relative;overflow:hidden;border-right:1px solid rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.05)}
+#world-map{width:100%;height:100%;display:block;cursor:grab}
+#world-map:active{cursor:grabbing}
+#map-controls{position:absolute;top:8px;right:8px;display:flex;gap:4px;z-index:10}
+.mctrl{background:rgba(4,0,0,.82);border:1px solid rgba(180,10,10,.35);color:rgba(200,200,200,.85);padding:3px 9px;font-size:.56rem;cursor:pointer;font-family:inherit;letter-spacing:.05em;transition:border-color .15s,color .15s}
+.mctrl:hover{border-color:#cc1111;color:#fff}
+#top10{position:absolute;bottom:0;left:0;padding:0 16px 14px 16px}
+.t-big{font-weight:700;font-size:2.5rem;line-height:1;letter-spacing:-.01em}
+.t-sub{display:flex;align-items:center;gap:5px;font-size:.52rem;font-weight:700;color:#cc1111;text-transform:uppercase;letter-spacing:.13em;margin:3px 0 7px}
+.t-sub svg{width:12px;height:12px}
+#t10-list{display:grid;grid-template-columns:88px 102px;font-size:.64rem;line-height:1.72;color:rgba(255,255,255,.87)}
+.rk{color:#cc1111;font-weight:700;margin-right:3px}
+#stats-col{grid-column:2;grid-row:1;border-right:1px solid rgba(255,255,255,.05);padding:14px 10px;display:flex;flex-direction:column}
+.sblk{flex:1;display:flex;flex-direction:column;justify-content:center;border-bottom:1px solid rgba(255,255,255,.04);padding:4px 0}
+.sblk:last-child{border-bottom:none}
+.srow{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px}
+.snum{font-weight:700;font-size:1.7rem;line-height:1;letter-spacing:-.01em}
+.slbl{font-size:.52rem;font-weight:700;color:#cc1111;text-transform:uppercase;letter-spacing:.12em;line-height:1.4;margin-top:3px}
+.sico{font-size:1.45rem;opacity:.52;margin-top:1px;flex-shrink:0}
+.sico-img{width:30px;height:30px;object-fit:contain;opacity:.72;flex-shrink:0;margin-top:2px;filter:brightness(0.9)}
+#rings-col{grid-column:3;grid-row:1/3;border-left:1px solid rgba(255,255,255,.05);padding:16px;display:flex;flex-direction:column}
+.rblk{flex:1;display:flex;flex-direction:row;align-items:center;gap:10px;justify-content:flex-start}
+.rblk+.rblk{border-top:1px solid rgba(255,255,255,.07);padding-top:12px;margin-top:8px}
+.rtitle{font-size:.62rem;font-weight:700;color:#cc1111;text-transform:uppercase;letter-spacing:.08em;text-align:left;margin:0 0 5px}
+.rbody{font-size:.56rem;color:rgba(195,195,195,.85);line-height:1.58;text-align:left}
+.rtext{flex:1;min-width:0}
+/* ===============================
+   CHARTS ROW (FIXED & ALIGNED)
+================================ */
+
+#charts-row{
+  grid-column:1/3;
+  grid-row:2;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  border-top:1px solid rgba(255,255,255,.06);
+  height:100%;
+}
+
+.ccell{
+  display:flex;
+  flex-direction:column;
+  padding:14px 18px;
+  border-right:1px solid rgba(255,255,255,.05);
+  min-height:0;
+}
+
+.ccell:last-child{
+  border-right:none;
+}
+
+.ctitle{
+  font-size:.70rem;
+  font-weight:700;
+  color:rgba(255,255,255,.92);
+  margin-bottom:10px;
+  flex:0 0 auto;
+}
+
+.chart-body{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:0;
+  height:150px;   /* altura uniforme charts */
+}
+
+/* bars */
+
+#abars{
+  width:100%;
+  max-width:420px;
+}
+
+.arow{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:10px;
+}
+
+.atrack{
+  flex:1;
+  height:20px;
+  background:rgba(255,255,255,.05);
+  position:relative;
+  border-radius:2px;
+  overflow:hidden;
+}
+
+.aname{
+  min-width:120px;
+}
+
+/* donut */
+
+.dwrap{
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:18px;
+}
+
+#donut-svg{
+  width:140px;
+  height:140px;
+  flex-shrink:0;
+}
+
+.dleg{display:flex;flex-direction:column;gap:10px}
+.legr{display:flex;align-items:flex-start;gap:8px}
+.ldot{width:11px;height:11px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.leg-text{display:flex;flex-direction:column;gap:2px}
+.leg-name{font-size:.62rem;font-weight:700;color:rgba(215,215,215,.9);line-height:1;text-transform:uppercase;letter-spacing:.06em}
+.leg-pct{font-size:.8rem;font-weight:700;color:#fff;line-height:1;letter-spacing:-.01em}
+
+.afill{
+  position:absolute;
+  left:0;
+  top:0;
+  height:100%;
+  border-radius:2px;
+}
+
+.anum{
+  position:absolute;
+  right:8px;
+  top:50%;
+  transform:translateY(-50%);
+  font-size:.72rem;
+  font-weight:700;
+  color:#fff;
+  pointer-events:none;
+}
+
+/* line chart */
+
+#line-svg{
+  width:100%;
+  height:100%;
+  display:block;
+}
+#mtip{position:fixed;background:rgba(4,0,0,.97);border:1px solid #cc1111;padding:7px 11px;font-size:.62rem;color:#ddd;border-radius:2px;pointer-events:none;z-index:9999;display:none;line-height:1.6;min-width:140px}
+#mtip .country-name{font-weight:700;color:#ff4444;display:block;margin-bottom:2px;font-size:.68rem}
+#mtip .hit-count{color:#fff;font-weight:700}
+#mtip .no-hit{color:rgba(140,140,140,.8)}
+#atip{position:fixed;background:rgba(4,0,0,.97);border:1px solid rgba(180,10,10,.6);padding:8px 12px;font-size:.6rem;color:#ccc;border-radius:2px;pointer-events:none;z-index:9999;display:none;line-height:1.65;max-width:260px}
+#atip b{color:#ff4444;font-size:.66rem;display:block;margin-bottom:3px}
+.atip-eg{color:rgba(180,180,180,.7);font-size:.56rem;margin-top:4px;display:block;font-style:italic}
+.t10-item{cursor:pointer;transition:color .15s;border-radius:1px;padding:0 2px}
+.t10-item:hover{color:#ff6666}
+.t10-item.t10-active{color:#ff4444;font-weight:700}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="mtip"></div>
+<div id="atip"></div>
+<div id="page">
+  <div id="hdr"><h1>Cyber Threat Intel Report: 2012-2023 Attack Series</h1></div>
+  <div id="main">
+
+    <div id="map-wrap">
+      <svg id="world-map"></svg>
+      <div id="map-controls">
+        <button class="mctrl" id="btn-reset">↺ Reset</button>
+        <button class="mctrl" id="btn-zi">＋</button>
+        <button class="mctrl" id="btn-zo">－</button>
+      </div>
+      <div id="top10">
+        <div class="t-big">TOP 10</div>
+        <div class="t-sub">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/>
+            <line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/>
+            <line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/>
+          </svg>
+          Most Targeted Nations
+        </div>
+        <div id="t10-list"></div>
+      </div>
+    </div>
+
+    <div id="stats-col">
+      <div class="sblk"><div class="srow"><div><div class="snum">U.N.</div><div class="slbl">Most Targeted<br>Institution</div></div><img src="UN.png" class="sico-img"></div></div>
+      <div class="sblk"><div class="srow"><div><div class="snum anim" data-t="127">0</div><div class="slbl">Total Targeted<br>Institutions</div></div><img src="ins.png" class="sico-img"></div></div>
+      <div class="sblk"><div class="srow"><div><div class="snum anim" data-t="2012">0</div><div class="slbl">Most Active<br>Period</div></div><img src="cal.png" class="sico-img"></div></div>
+      <div class="sblk"><div class="srow"><div><div class="snum anim" data-t="14">0</div><div class="slbl">Average Operations<br>Per Year</div></div><img src="mask.png" class="sico-img"></div></div>
+    </div>
+
+    <div id="rings-col">
+      <div class="rblk">
+        <svg id="ring1" width="80" height="80" style="flex-shrink:0"></svg>
+        <div class="rtext"><div class="rtitle">DDoS &amp; Defacement</div>
+        <div class="rbody">These attacks constitute one-third of all cyber incidents executed by Anonymous, aiming to disrupt service availability and compromise integrity of online assets. According to Fortinet Global Threat Landscape Report 2023, DoS and DDoS are the most common attack type.</div></div>
+      </div>
+      <div class="rblk">
+        <svg id="ring2" width="80" height="80" style="flex-shrink:0"></svg>
+        <div class="rtext"><div class="rtitle">Public Institutions</div>
+        <div class="rbody">Nearly 3/4 of the targeted entities are public sector institutions, including police departments, ministries, and associations. There's a focus on exploiting vulnerabilities in governmental and public organizations, affecting critical operations and public services.</div></div>
+      </div>
+    </div>
+
+    <div id="charts-row">
+
+  <div class="ccell">
+    <div class="ctitle">Top 3 Attack Type</div>
+    <div class="chart-body">
+      <div id="abars"></div>
+    </div>
+  </div>
+
+  <div class="ccell">
+    <div class="ctitle">Institution Type</div>
+    <div class="chart-body">
+      <div class="dwrap">
+        <svg id="donut-svg"></svg>
+        <div class="dleg" id="dleg"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ccell">
+    <div class="ctitle">Affected Institutions per Year</div>
+    <div class="chart-body">
+      <svg id="line-svg"></svg>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+/* ══════════ DATA ══════════ */
+const YD=[{y:2012,n:57},{y:2013,n:20},{y:2014,n:3},{y:2015,n:2},{y:2016,n:3},{y:2017,n:1},{y:2019,n:1},{y:2020,n:11},{y:2021,n:9},{y:2022,n:34},{y:2023,n:11}];
+const ATK=[{name:'DdoS',n:32,fill:'#cc1111'},{name:'Defacement',n:30,fill:'#991111'},{name:'Data Exfiltration',n:23,fill:'#cc8888'}];
+const INST=[{name:'Public',pct:71.43,fill:'#cc1111'},{name:'Private',pct:28.57,fill:'#661111'}];
+
+/* ── Attack data per country (name → count) ── */
+const HITS = {
+  'United States of America':28,'China':24,'Russia':22,'Philippines':18,
+  'Taiwan':18,'Ukraine':15,'United Kingdom':14,'Belarus':5,'Iran':5,
+  'India':5,'Canada':5,'Israel':6,'Japan':6,'Malaysia':10,'Australia':8,
+  'Poland':4,'North Korea':4,'Brazil':4,'Nigeria':3,'Bahrain':3,
+  'Mexico':3,'Myanmar':3,'Singapore':3,'Thailand':3,'Syria':2,
+  'Uganda':2,'New Zealand':2,'Germany':2,'Austria':1,'France':2,
+  'Cyprus':1,'South Africa':1,'Hungary':1,'Slovenia':1,'Gabon':1,'Chile':2,
+  'Hong Kong':8,'Palestine':1,'Indonesia':1,'Turkey':2,'Saudi Arabia':1,
+};
+
+/* ── ISO numeric → country name (comprehensive) ── */
+const ID2N = {
+  4:'Afghanistan',8:'Albania',12:'Algeria',24:'Angola',32:'Argentina',36:'Australia',
+  40:'Austria',50:'Bangladesh',56:'Belgium',64:'Bhutan',68:'Bolivia',76:'Brazil',
+  100:'Bulgaria',104:'Myanmar',116:'Cambodia',124:'Canada',152:'Chile',156:'China',
+  170:'Colombia',191:'Croatia',196:'Cyprus',203:'Czechia',208:'Denmark',218:'Ecuador',
+  818:'Egypt',246:'Finland',250:'France',266:'Gabon',276:'Germany',288:'Ghana',
+  300:'Greece',348:'Hungary',356:'India',360:'Indonesia',364:'Iran',368:'Iraq',
+  372:'Ireland',376:'Israel',380:'Italy',392:'Japan',400:'Jordan',398:'Kazakhstan',
+  404:'Kenya',408:'North Korea',410:'South Korea',458:'Malaysia',484:'Mexico',
+  504:'Morocco',524:'Nepal',528:'Netherlands',554:'New Zealand',566:'Nigeria',
+  578:'Norway',586:'Pakistan',275:'Palestine',604:'Peru',608:'Philippines',
+  616:'Poland',620:'Portugal',634:'Qatar',642:'Romania',643:'Russia',646:'Rwanda',
+  682:'Saudi Arabia',703:'Slovakia',705:'Slovenia',706:'Somalia',710:'South Africa',
+  724:'Spain',752:'Sweden',756:'Switzerland',760:'Syria',764:'Thailand',
+  792:'Turkey',800:'Uganda',804:'Ukraine',784:'UAE',826:'United Kingdom',
+  840:'United States of America',862:'Venezuela',704:'Vietnam',887:'Yemen',
+  894:'Zambia',112:'Belarus',48:'Bahrain',702:'Singapore',344:'Hong Kong',
+  158:'Taiwan',40:'Austria',36:'Australia',152:'Chile',2:'Algeria',
+};
+
+/* Build hit map by numeric ID */
+const HITS_BY_ID = {};
+const N2ID = Object.fromEntries(Object.entries(ID2N).map(([id,n])=>[n,+id]));
+Object.entries(HITS).forEach(([name,v])=>{ const id=N2ID[name]; if(id) HITS_BY_ID[id]=v; });
+const MAX_HITS = Math.max(...Object.values(HITS));
+
+/* ══════════ COUNTERS ══════════ */
+document.querySelectorAll('.anim').forEach(el=>{
+  const t=+el.dataset.t,d=1100,s=performance.now();
+  const f=n=>{const p=Math.min((n-s)/d,1),e=p<.5?2*p*p:-1+(4-2*p)*p;el.textContent=Math.round(e*t);if(p<1)requestAnimationFrame(f);};
+  setTimeout(()=>requestAnimationFrame(f),350);
+});
+
+/* ══════════ RINGS ══════════ */
+function ring(id,pct,label){
+  const svg=d3.select('#'+id),cx=40,cy=40,ro=35,ri=25,tau=Math.PI*2;
+  const arc=d3.arc().innerRadius(ri).outerRadius(ro).startAngle(0);
+  const g=svg.append('g').attr('transform',`translate(${cx},${cy})`);
+  g.append('path').datum({endAngle:tau}).attr('d',arc).attr('fill','rgba(255,255,255,.07)');
+  g.append('path').datum({startAngle:tau-.1,endAngle:tau})
+    .attr('d',d3.arc().innerRadius(ri).outerRadius(ro).startAngle(d=>d.startAngle).endAngle(d=>d.endAngle))
+    .attr('fill','rgba(200,200,200,.22)');
+  const fp=g.append('path').datum({endAngle:0}).attr('d',arc).attr('fill','#cc1111');
+  fp.transition().duration(1300).ease(d3.easeCubicOut)
+    .attrTween('d',function(d){const i=d3.interpolate(d.endAngle,pct/100*tau);return t=>{d.endAngle=i(t);return arc(d);};});
+  g.append('text').attr('text-anchor','middle').attr('dominant-baseline','middle')
+    .attr('font-family',"'IBM Plex Sans JP',sans-serif").attr('font-weight','700').attr('font-size','13px').attr('fill','#fff')
+    .text(label);
+}
+ring('ring1',62,'62%'); ring('ring2',72,'72%');
+
+/* ══════════ ATTACK BARS ══════════ */
+const mx=Math.max(...ATK.map(a=>a.n));
+const ATK_INFO = {
+  'DdoS': { desc: 'Distributed Denial of Service. Floods target servers with traffic, making them unreachable.', eg: 'Notable: 2012 Operation Megaupload — DDoS against DOJ, FBI, MPAA.' },
+  'Defacement': { desc: 'Unauthorized alteration of a website\u2019s visual content to spread a message.', eg: 'Notable: 2013 Aaron Swartz — USSC homepage replaced with a manifesto.' },
+  'Data Exfiltration': { desc: 'Unauthorized extraction and public leak of sensitive internal data.', eg: 'Notable: 2021 Epik hack — 180 GB of user and domain data exposed.' },
+};
+const atip = document.getElementById('atip');
+const abarsEl = document.getElementById('abars');
+abarsEl.innerHTML = ATK.map(a=>`<div class="arow" data-atk="${a.name}"><div class="atrack"><div class="afill" style="width:${(a.n/mx*100).toFixed(1)}%;background:${a.fill}"></div><span class="anum">${a.n}</span></div><span class="aname">${a.name}</span></div>`).join('');
+abarsEl.querySelectorAll('.arow').forEach(row=>{
+  const info = ATK_INFO[row.dataset.atk];
+  if(!info) return;
+  row.addEventListener('mouseenter', e=>{
+    atip.style.display='block';
+    atip.innerHTML=`<b>${row.dataset.atk}</b><br>${info.desc}<br><span class="atip-eg">${info.eg}</span>`;
+  });
+  row.addEventListener('mousemove', e=>{ atip.style.left=(e.clientX+14)+'px'; atip.style.top=(e.clientY-12)+'px'; });
+  row.addEventListener('mouseleave', ()=>{ atip.style.display='none'; });
+});
+
+/* ══════════ DONUT ══════════ */
+(function(){
+  const sz=108, cx=54, cy=54, ro=48, ri=29;
+  const svg=d3.select('#donut-svg')
+    .attr('width',sz).attr('height',sz).attr('viewBox',`0 0 ${sz} ${sz}`);
+  const arc=d3.arc().innerRadius(ri).outerRadius(ro);
+  const pie=d3.pie().value(d=>d.pct).sort(null);
+  const g=svg.append('g').attr('transform',`translate(${cx},${cy})`);
+  const arcs=pie(INST);
+
+  g.selectAll('path').data(arcs).enter().append('path').attr('d',arc)
+    .attr('fill',d=>d.data.fill).attr('stroke','#090000').attr('stroke-width',1.5);
+
+  /* Clean legend OUTSIDE the SVG – rendered in #dleg */
+  const legEl = document.getElementById('dleg');
+  legEl.innerHTML = '';
+  INST.forEach(d=>{
+    const row = document.createElement('div');
+    row.className = 'legr';
+    row.innerHTML =
+      `<div class="ldot" style="background:${d.fill}"></div>`+
+      `<div class="leg-text">`+
+        `<span class="leg-name">${d.name}</span>`+
+        `<span class="leg-pct">${d.pct.toFixed(2).replace('.',',')}%</span>`+
+      `</div>`;
+    legEl.appendChild(row);
+  });
+})();
+
+/* ══════════ LINE CHART ══════════ */
+function renderLine(){
+  const el=document.getElementById('line-svg'),svg=d3.select('#line-svg');
+  svg.selectAll('*').remove();
+  const rect = el.getBoundingClientRect();
+  const W = rect.width;
+  const H = rect.height * 0.78; // reduce altura visual
+  const m={top:14,right:6,bottom:20,left:4},w=W-m.left-m.right,h=H-m.top-m.bottom;
+  const x=d3.scalePoint().domain(YD.map(d=>String(d.y))).range([0,w]).padding(.3);
+  const y=d3.scaleLinear().domain([0,d3.max(YD,d=>d.n)*1.2]).range([h,0]);
+  const g=svg.append('g').attr('transform',`translate(${m.left},${m.top})`);
+  const defs=svg.append('defs');
+  const gr=defs.append('linearGradient').attr('id','ag').attr('x1','0').attr('x2','0').attr('y1','0').attr('y2','1');
+  gr.append('stop').attr('offset','0%').attr('stop-color','#cc1111').attr('stop-opacity',.38);
+  gr.append('stop').attr('offset','100%').attr('stop-color','#cc1111').attr('stop-opacity',.02);
+  g.append('path').datum(YD).attr('d',d3.area().x(d=>x(String(d.y))).y0(h).y1(d=>y(d.n)).curve(d3.curveMonotoneX)).attr('fill','url(#ag)');
+  g.append('path').datum(YD).attr('d',d3.line().x(d=>x(String(d.y))).y(d=>y(d.n)).curve(d3.curveMonotoneX)).attr('fill','none').attr('stroke','#cc1111').attr('stroke-width',1.5);
+  YD.forEach(d=>{
+    const cx2=x(String(d.y)),cy2=y(d.n);
+    g.append('circle').attr('cx',cx2).attr('cy',cy2).attr('r',2.8).attr('fill','#cc1111').attr('stroke','#fff').attr('stroke-width',.8);
+    g.append('text').attr('x',cx2).attr('y',cy2-6.5).attr('text-anchor','middle').attr('fill','rgba(255,255,255,.78)').attr('font-size','6.8px').attr('font-family',"'IBM Plex Sans JP',sans-serif").text(d.n);
+  });
+  g.append('g').attr('transform',`translate(0,${h})`).call(d3.axisBottom(x).tickSize(0).tickFormat(d=>d))
+    .call(a=>{a.select('.domain').attr('stroke','rgba(255,255,255,.09)');a.selectAll('text').attr('fill','rgba(155,155,155,.75)').attr('font-size','6.2px').attr('font-family',"'IBM Plex Sans JP',sans-serif").attr('dy','9px');});
+}
+
+/* ══════════ WORLD MAP (interactive choropleth) ══════════ */
+let zoomBehavior, svgSel;
+
+async function renderMap(){
+  const el=document.getElementById('world-map');
+  const W=el.clientWidth||800, H=el.clientHeight||380;
+  el.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  svgSel=d3.select('#world-map'); svgSel.selectAll('*').remove();
+
+  const proj=d3.geoNaturalEarth1().scale(W/5.6).translate([W/2, H/2.08]);
+  const pathGen=d3.geoPath().projection(proj);
+
+  /* ── Color scale: dark near-black → vivid red ── */
+  const colorScale=d3.scaleLinear()
+    .domain([1, MAX_HITS*0.3, MAX_HITS*0.65, MAX_HITS])
+    .range(['#ABBD18','#B68824','#904123','#c01010'])
+    .clamp(true);
+  const noHitColor='#1e2a2a';
+
+  const world=await d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+  const features=topojson.feature(world,world.objects.countries);
+
+  /* ── Container group for zoom ── */
+  const mapG=svgSel.append('g').attr('class','map-g');
+
+  /* Sphere fill */
+  mapG.append('path').datum({type:'Sphere'}).attr('d',pathGen)
+    .attr('fill','rgba(5,0,0,.6)').attr('stroke','none');
+
+  /* Graticule */
+  mapG.append('path').datum(d3.geoGraticule()()).attr('d',pathGen)
+    .attr('fill','none').attr('stroke','rgba(140,5,5,.06)').attr('stroke-width',.4);
+
+  /* ── Countries ── */
+  const tip=document.getElementById('mtip');
+
+  mapG.selectAll('path.co').data(features.features.filter(d=>+d.id!==10)).enter()
+    .append('path').attr('class','co')
+    .attr('d',pathGen)
+    .attr('fill',d=>{
+      const h=HITS_BY_ID[+d.id]||0;
+      return h>0 ? colorScale(h) : noHitColor;
+    })
+    .attr('stroke','rgba(0,0,0,.5)').attr('stroke-width',.28)
+    .style('cursor','pointer')
+    .on('mouseover',function(event,d){
+      const name=ID2N[+d.id]||'';
+      const hits=HITS_BY_ID[+d.id]||0;
+      /* highlight border */
+      d3.select(this).raise().attr('stroke','rgba(255,80,80,.9)').attr('stroke-width',1.2);
+      if(!name) return;
+      tip.style.display='block';
+      tip.innerHTML=`<span class="country-name">${name}</span>`
+        +(hits>0
+          ? `Attacks recorded: <span class="hit-count">${hits}</span>`
+          : `<span class="no-hit">No attacks recorded</span>`);
+    })
+    .on('mousemove',event=>{
+      tip.style.left=(event.clientX+14)+'px';
+      tip.style.top=(event.clientY-12)+'px';
+    })
+    .on('mouseout',function(){
+      d3.select(this).attr('stroke', d => (HITS_BY_ID[+d.id]||0) > 0 ? 'rgba(0,0,0,.5)' : 'rgba(80,100,100,.35)').attr('stroke-width',.28);
+      tip.style.display='none';
+    });
+
+  /* Sphere outline on top */
+  mapG.append('path').datum({type:'Sphere'}).attr('d',pathGen)
+    .attr('fill','none').attr('stroke','rgba(140,5,5,.14)').attr('stroke-width',.9);
+
+  /* ── Color legend ── */
+  const legW=110, legH=7, legX=W-legW-12, legY=H-20;
+  const legDefs=svgSel.append('defs');
+  const legGrad=legDefs.append('linearGradient').attr('id','legG');
+  legGrad.append('stop').attr('offset','0%').attr('stop-color','#ABBD18');
+  legGrad.append('stop').attr('offset','33%').attr('stop-color','#B68824');
+  legGrad.append('stop').attr('offset','66%').attr('stop-color','#904123');
+  legGrad.append('stop').attr('offset','100%').attr('stop-color','#c01010');
+  const legG=svgSel.append('g').attr('transform',`translate(${legX},${legY})`);
+  legG.append('rect').attr('width',legW).attr('height',legH).attr('rx',1).attr('fill','url(#legG)');
+  const fnt={'font-family':"'IBM Plex Sans JP',sans-serif",'font-size':'6px','fill':'rgba(160,160,160,.7)'};
+  legG.append('text').attr('x',0).attr('y',legH+9).text('0').attr('text-anchor','middle').call(s=>Object.entries(fnt).forEach(([k,v])=>s.attr(k,v)));
+  legG.append('text').attr('x',legW/2).attr('y',legH-1).text('attacks').attr('text-anchor','middle').attr('font-size','5.5px').attr('fill','rgba(130,130,130,.6)').attr('font-family',"'IBM Plex Sans JP',sans-serif");
+  legG.append('text').attr('x',legW).attr('y',legH+9).text(MAX_HITS).attr('text-anchor','middle').call(s=>Object.entries(fnt).forEach(([k,v])=>s.attr(k,v)));
+
+  /* ── Pulsing markers for top 10 countries ── */
+  const CENTROIDS=[
+    {name:'United States of America',lon:-98,lat:39},
+    {name:'China',lon:104,lat:35},
+    {name:'Russia',lon:90,lat:60},
+    {name:'Philippines',lon:122,lat:12},
+    {name:'Taiwan',lon:121,lat:23.6},
+    {name:'Ukraine',lon:32,lat:49},
+    {name:'United Kingdom',lon:-2,lat:54},
+    {name:'Malaysia',lon:109,lat:4},
+    {name:'Australia',lon:134,lat:-26},
+    {name:'Belarus',lon:28,lat:53},
+  ];
+  const pulseG=mapG.append('g').attr('class','pulses');
+  CENTROIDS.forEach(c=>{
+    const xy=proj([c.lon,c.lat]);
+    if(!xy) return;
+    const [px,py]=xy;
+    const hits=HITS[c.name]||1;
+    const r=2+hits/9;
+    /* static dot */
+    pulseG.append('circle').attr('cx',px).attr('cy',py).attr('r',r)
+      .attr('fill','rgba(255,55,55,.92)').attr('stroke','rgba(255,100,100,.4)').attr('stroke-width',.8);
+    /* animate pulse rings */
+    function pulse(){
+      pulseG.append('circle').attr('cx',px).attr('cy',py).attr('r',r+1)
+        .attr('fill','none').attr('stroke','rgba(220,30,30,.7)').attr('stroke-width',1.2)
+        .transition().duration(1600+Math.random()*600).ease(d3.easeQuadOut)
+        .attr('r',r+12+hits/3).attr('stroke-opacity',0).attr('stroke-width',.3).remove();
+    }
+    pulse();
+    setInterval(pulse, 2000+Math.random()*1200);
+  });
+
+  /* ── Zoom & Pan ── */
+  zoomBehavior=d3.zoom()
+    .scaleExtent([1,9])
+    .on('zoom',event=>{ mapG.attr('transform',event.transform); });
+  svgSel.call(zoomBehavior);
+
+  /* double-click → reset */
+  svgSel.on('dblclick.zoom',null);
+  svgSel.on('dblclick',()=>svgSel.transition().duration(550).call(zoomBehavior.transform,d3.zoomIdentity));
+
+  /* buttons */
+  document.getElementById('btn-reset').onclick=()=>svgSel.transition().duration(500).call(zoomBehavior.transform,d3.zoomIdentity);
+  document.getElementById('btn-zi').onclick=()=>svgSel.transition().duration(300).call(zoomBehavior.scaleBy,1.6);
+  document.getElementById('btn-zo').onclick=()=>svgSel.transition().duration(300).call(zoomBehavior.scaleBy,0.625);
+}
+
+/* ══════════ INIT ══════════ */
+renderMap();
+renderLine();
+window.addEventListener('resize',()=>{ renderMap(); renderLine(); });
+
+/* ═══════════ TOP 10 INTERACTIVE LIST ═══════════ */
+const TOP10 = [
+  {rank:1,  label:'U.S.A',        name:'United States of America', lon:-98,  lat:39,   id:840},
+  {rank:2,  label:'China',        name:'China',                    lon:104,  lat:35,   id:156},
+  {rank:3,  label:'U.K.',         name:'United Kingdom',           lon:-2,   lat:54,   id:826},
+  {rank:4,  label:'Taiwan',       name:'Taiwan',                   lon:121,  lat:23.6, id:158},
+  {rank:5,  label:'Russia',       name:'Russia',                   lon:90,   lat:60,   id:643},
+  {rank:6,  label:'Philippines',  name:'Philippines',              lon:122,  lat:12,   id:608},
+  {rank:7,  label:'Ukraine',      name:'Ukraine',                  lon:32,   lat:49,   id:804},
+  {rank:8,  label:'Hong Kong',    name:'Hong Kong',                lon:114,  lat:22.3, id:344},
+  {rank:9,  label:'Malaysia',     name:'Malaysia',                 lon:109,  lat:4,    id:458},
+  {rank:10, label:'Australia',    name:'Australia',                lon:134,  lat:-26,  id:36},
+];
+
+/* Build the list */
+const listEl = document.getElementById('t10-list');
+TOP10.forEach((c,i)=>{
+  const col = i < 5 ? 0 : 1;
+  const div = document.createElement('div');
+  div.className = 't10-item';
+  div.dataset.id = c.id;
+  div.dataset.lon = c.lon;
+  div.dataset.lat = c.lat;
+  div.dataset.name = c.name;
+  div.innerHTML = `<span class="rk">${c.rank}.</span>${c.label}`;
+  listEl.appendChild(div);
+});
+
+/* Re-order into 2-col grid visually (already done by CSS grid) */
+
+/* Hover/click handlers — zoom map + highlight country */
+let activeT10 = null;
+function highlightCountry(id, zoom, lon, lat){
+  if(!svgSel || !zoomBehavior) return;
+  /* Highlight country path */
+  svgSel.selectAll('path.co')
+    .each(function(d){
+      const self = d3.select(this);
+      const isTarget = +d.id === id;
+      if(isTarget){
+        self.raise()
+          .attr('stroke','rgba(255,200,80,.95)')
+          .attr('stroke-width', 1.8);
+      } else {
+        self.attr('stroke', d2=>(HITS_BY_ID[+d2.id]||0)>0?'rgba(0,0,0,.5)':'rgba(80,100,100,.35)')
+          .attr('stroke-width',.28);
+      }
+    });
+}
+
+function resetHighlight(){
+  if(!svgSel) return;
+  svgSel.selectAll('path.co')
+    .attr('stroke', d=>(HITS_BY_ID[+d.id]||0)>0?'rgba(0,0,0,.5)':'rgba(80,100,100,.35)')
+    .attr('stroke-width',.28);
+}
+
+listEl.querySelectorAll('.t10-item').forEach(item=>{
+  const id   = +item.dataset.id;
+  const lon  = +item.dataset.lon;
+  const lat  = +item.dataset.lat;
+  const name = item.dataset.name;
+
+  item.addEventListener('mouseenter', ()=>{
+    highlightCountry(id, false, lon, lat);
+    item.classList.add('t10-active');
+  });
+  item.addEventListener('mouseleave', ()=>{
+    if(activeT10 !== id){ resetHighlight(); }
+    item.classList.remove('t10-active');
+    if(activeT10 !== id) resetHighlight();
+  });
+  item.addEventListener('click', ()=>{
+    if(activeT10 === id){
+      activeT10 = null;
+      resetHighlight();
+      listEl.querySelectorAll('.t10-item').forEach(x=>x.classList.remove('t10-active'));
+      /* reset zoom */
+      svgSel.transition().duration(600).call(zoomBehavior.transform, d3.zoomIdentity);
+    } else {
+      activeT10 = id;
+      listEl.querySelectorAll('.t10-item').forEach(x=>x.classList.remove('t10-active'));
+      item.classList.add('t10-active');
+      highlightCountry(id, true, lon, lat);
+      /* Zoom map to country centroid */
+      const mapEl = document.getElementById('world-map');
+      const W = mapEl.clientWidth, H = mapEl.clientHeight;
+      const proj = d3.geoNaturalEarth1().scale(W/5.6).translate([W/2, H/2.08]);
+      const [px,py] = proj([lon,lat]);
+      const k = 3.5;
+      const tx = W/2 - k*px, ty = H/2 - k*py;
+      svgSel.transition().duration(650)
+        .call(zoomBehavior.transform, d3.zoomIdentity.translate(tx,ty).scale(k));
+    }
+  });
+});
+
+</script>
+</body>
+</html>
